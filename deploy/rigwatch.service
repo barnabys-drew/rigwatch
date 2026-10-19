@@ -1,0 +1,18 @@
+# Install:  deploy/up.sh   (copies this unit, enables it, exposes it on the tailnet)
+# Edit the path below if the repo lives somewhere other than ~/code/rigwatch.
+[Unit]
+Description=rigwatch resource dashboard (loopback only)
+After=docker.service
+
+[Service]
+WorkingDirectory=%h/code/rigwatch
+ExecStart=/usr/bin/python3 -m rigwatch serve --port 8775
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5
+# the dashboard watches its own cost; keep it from ever being the problem
+Nice=5
+MemoryMax=512M
+
+[Install]
+WantedBy=default.target

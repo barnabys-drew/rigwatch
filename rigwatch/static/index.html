@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rigwatch</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<header class="top">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs><linearGradient id="mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3987e5"/><stop offset="1" stop-color="#9085e9"/></linearGradient></defs>
+      <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#mk)"/>
+      <path class="beat" d="M7 19h4l2.5-7 4 12 3-9 1.5 4H25" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>rigwatch</h1>
+      <p class="host" id="host">connecting…</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span class="live" id="live"><i></i><span>connecting</span></span>
+    <button class="icon-btn" id="theme" type="button" aria-label="Switch colour theme" title="Switch colour theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="hero" aria-label="Share of the whole PC">
+    <article class="card share" id="share-cpu"></article>
+    <article class="card share" id="share-mem"></article>
+  </section>
+
+  <section class="tiles" id="tiles" aria-label="Machine totals"></section>
+
+  <div class="toolbar" role="toolbar" aria-label="Chart filters">
+    <div class="seg" id="range" role="radiogroup" aria-label="Time range">
+      <button data-v="15m" role="radio">15 min</button><button data-v="1h" role="radio">1 h</button><button data-v="6h" role="radio">6 h</button><button data-v="24h" role="radio">24 h</button><button data-v="7d" role="radio">7 d</button><button data-v="30d" role="radio">30 d</button>
+    </div>
+    <div class="seg" id="scope" role="radiogroup" aria-label="Chart scope">
+      <button data-v="pc" role="radio">Whole PC</button><button data-v="apps" role="radio">Just my apps</button>
+    </div>
+  </div>
+
+  <section class="charts">
+    <article class="card chart-card">
+      <div class="card-head">
+        <div><h2>Who's using the CPU</h2><p class="sub" id="cpu-sub">percent of all 16 threads</p></div>
+        <button class="ghost" type="button" data-table="cpu">Table</button>
+      </div>
+      <div class="chart" id="chart-cpu"></div>
+      <div class="legend" id="legend-cpu"></div>
+    </article>
+    <article class="card chart-card">
+      <div class="card-head">
+        <div><h2>Who's holding memory</h2><p class="sub" id="mem-sub">gigabytes in use</p></div>
+        <button class="ghost" type="button" data-table="mem">Table</button>
+      </div>
+      <div class="chart" id="chart-mem"></div>
+      <div class="legend" id="legend-mem"></div>
+    </article>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Your apps &amp; services</h2>
+      <p class="sub" id="apps-sub"></p>
+    </div>
+    <div class="apps" id="apps"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>The rest of your PC</h2>
+      <p class="sub" id="pc-sub">Windows programs outside WSL and outside your apps</p>
+    </div>
+    <div class="pcside">
+      <article class="card" id="winprocs"></article>
+      <div class="pcstack">
+        <article class="card" id="gpu"></article>
+        <article class="card" id="net"></article>
+      </div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</main>
+<div class="tip" id="tip" role="status" aria-live="off" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

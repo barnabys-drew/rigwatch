@@ -1,0 +1,82 @@
+# Example rigwatch config. Copy it to apps.toml (git-ignored) and point the
+# matchers at your own units, containers and programs.
+#
+# Groups are listed in colour order: the dashboard gives group N the Nth
+# categorical colour, so keep this order stable (colour follows the app, never
+# its rank). Eight groups at most; fold anything more into the catch-all.
+#
+# Matchers (all optional, shell-style globs except `procs`):
+#   units         systemd --user units           e.g. "myapp-*.service"
+#   system_units  system systemd units           e.g. "osqueryd.service"
+#   containers    docker container names
+#   projects      docker compose project names
+#   procs         regexes on a process command line, applied inside the
+#                 `split_units` below (a match claims the process and its children)
+#   windows       Windows process names (no .exe)
+#   timers        systemd --user timers shown on the card
+#   nics          Windows network adapters whose traffic is this app's (a capture port)
+#   catch_all     true: also takes every user unit and container nobody claimed
+
+# Units whose cgroup hosts many unrelated processes, such as a terminal
+# multiplexer's server. Their processes are matched one by one against `procs`;
+# whatever is left stays in "rest of WSL".
+split_units = ["herdr.service", "tmux-server.service"]
+
+# User units and containers that are infrastructure, not apps.
+ignore_units = ["herdr.service", "tmux-server.service", "dbus.service", "at-spi-dbus-bus.service"]
+
+[[group]]
+id = "sensor"
+name = "Network sensor"
+blurb = "Zeek + osquery home sensor"
+units = ["sensor-*.service"]
+system_units = ["osqueryd.service"]
+containers = ["zeek*"]
+windows = ["dumpcap", "osqueryd"]
+nics = ["Mirror"]            # the switch mirror port the capture listens on
+timers = ["sensor-*.timer"]
+
+[[group]]
+id = "agents"
+name = "AI agents"
+blurb = "Coding agent sessions + MCP servers"
+procs = ['^(\S*/)?claude(\s|$)', '/\.local/share/claude/versions/']
+
+[[group]]
+id = "chat"
+name = "Chat server"
+blurb = "Self-hosted chat stack"
+projects = ["chat"]
+
+[[group]]
+id = "web"
+name = "Web dashboards"
+blurb = "Small local web apps"
+units = ["*-dashboard.service"]
+containers = ["grafana*", "metabase*"]
+
+[[group]]
+id = "media"
+name = "Bots & media"
+blurb = "Discord bot, transcription, TTS"
+units = ["*-bot.service", "transcribe*.service"]
+containers = ["tts*"]
+timers = ["*-bot-update.timer", "transcribe*.timer"]
+
+[[group]]
+id = "data"
+name = "Databases"
+blurb = "Postgres + Redis"
+containers = ["postgres*", "redis*"]
+
+[[group]]
+id = "other"
+name = "Other projects"
+blurb = "Labs, workers, anything new"
+catch_all = true
+
+[[group]]
+id = "rigwatch"
+name = "rigwatch"
+blurb = "This dashboard's own cost"
+units = ["rigwatch.service"]
