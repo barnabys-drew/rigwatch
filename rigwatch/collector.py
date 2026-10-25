@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 import time
+import socket
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -46,10 +47,19 @@ class Group:
 
 
 @dataclass
+class Peer:
+    """Another machine's rigwatch, linked from the header so one page can switch between them."""
+    name: str
+    url: str
+
+
+@dataclass
 class Config:
     groups: list[Group]
     split_units: list[str]
     ignore_units: list[str]
+    machine: str = ""                                   # this machine's name in the switcher (default: hostname)
+    peers: list[Peer] = field(default_factory=list)
 
     def group_ids(self) -> list[str]:
         return [g.id for g in self.groups]
@@ -64,7 +74,14 @@ def load_config(path: Path) -> Config:
         groups.append(Group(**g))
     if len(groups) > 8:
         raise ValueError("apps.toml: at most 8 groups (fold the rest into the catch-all)")
-    return Config(groups, raw.get("split_units", []), raw.get("ignore_units", []))
+    peers = []
+    for p in raw.get("peer", []):
+        name, url = str(p.get("name", "")).strip(), str(p.get("url", "")).strip()
+        if not name or not url.startswith(("https://", "http://")):
+            raise ValueError(f"apps.toml: each [[peer]] needs a name and an http(s) url, got {p!r}")
+        peers.append(Peer(name, url))
+    return Config(groups, raw.get("split_units", []), raw.get("ignore_units", []),
+                  machine=str(raw.get("machine", "")).strip() or socket.gethostname(), peers=peers)
 
 
 def _match(name: str, patterns: list[str]) -> bool:

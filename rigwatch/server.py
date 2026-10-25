@@ -226,6 +226,7 @@ def build_snapshot(cfg: Config, wsl: dict, win: dict | None, sampler: WslSampler
                 "swap_used": wsl["swap_used"], "net": wsl["net"]},
         "win": winout,
         "groups": groups,
+        "machine": {"name": cfg.machine, "peers": [{"name": p.name, "url": p.url} for p in cfg.peers]},
     }
 
 

@@ -104,6 +104,22 @@ def wsl_sample(c):
             "swap_used": 0, "net": 0.0, "groups": groups}
 
 
+class Machines(unittest.TestCase):
+    def test_machine_name_and_peers(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "apps.toml"
+            path.write_text('machine = "workstation"\n[[peer]]\nname = "mini-pc"\nurl = "https://mini-pc.example:10002"\n')
+            c = load_config(path)
+            self.assertEqual((c.machine, [(p.name, p.url) for p in c.peers]),
+                             ("workstation", [("mini-pc", "https://mini-pc.example:10002")]))
+            path.write_text('[[peer]]\nname = "x"\nurl = "javascript:alert(1)"\n')
+            with self.assertRaises(ValueError):
+                load_config(path)
+            path.write_text("")
+            self.assertTrue(load_config(path).machine)      # the hostname when not set
+            self.assertEqual(load_config(path).peers, [])
+
+
 class Accounting(unittest.TestCase):
     def test_whole_pc_split_adds_up(self):
         c = cfg()

@@ -17,6 +17,13 @@
 #   nics          Windows network adapters whose traffic is this app's (a capture port)
 #   catch_all     true: also takes every user unit and container nobody claimed
 
+# Optional: this machine's name, and other machines running rigwatch. With peers,
+# the header shows a switcher (this machine | each peer) linking their dashboards.
+# machine = "workstation"
+# [[peer]]
+# name = "mini-pc"
+# url = "https://mini-pc.example.ts.net:10002"
+
 # Units whose cgroup hosts many unrelated processes, such as a terminal
 # multiplexer's server. Their processes are matched one by one against `procs`;
 # whatever is left stays in "rest of WSL".

@@ -456,6 +456,14 @@ function renderWindows() {
 
 function renderHeader() {
   const s = state.snap;
+  const m = s.machine || { name: '', peers: [] };
+  document.title = m.name ? `rigwatch · ${m.name}` : 'rigwatch';
+  const nav = $('#machines');
+  nav.hidden = !m.peers.length;
+  if (m.peers.length) {
+    nav.innerHTML = `<span aria-current="page">${esc(m.name)}</span>` +
+      m.peers.map(p => `<a href="${esc(p.url)}">${esc(p.name)}</a>`).join('');
+  }
   const host = [s.host.cpu_name?.replace(/\s+\d+-Core Processor/, ''), s.host.gpu_name, fmtBytes(s.pc.mem_total, 0) + ' RAM'].filter(Boolean);
   $('#host').textContent = host.join(' · ');
   const rw = s.groups.find(g => g.id === 'rigwatch');
