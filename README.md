@@ -102,6 +102,11 @@ One group can be `catch_all = true`. It picks up any user unit or container nobo
 claimed, so a new project shows up without a config change. See
 [`apps.example.toml`](apps.example.toml) for the full set.
 
+**More than one machine:** rigwatch watches the machine it runs on, so run one on each.
+Give each a `machine` name and list the others as `[[peer]]` entries (name and URL) in
+`apps.toml`. The header then shows a switcher next to the title that links their
+dashboards.
+
 ## Tests
 
 ```sh
