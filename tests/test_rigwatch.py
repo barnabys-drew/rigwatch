@@ -7,7 +7,7 @@ from pathlib import Path
 
 from rigwatch.collector import (Config, Group, Leaf, Proc, assign_procs, classify_leaf, cgroup_usage,
                                 discover_leaves, load_config, _short_cmd)
-from rigwatch.server import History, build_snapshot, unit_part_state
+from rigwatch.server import History, build_snapshot, home_link, unit_part_state
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -175,6 +175,23 @@ class Demo(unittest.TestCase):
         self.assertAlmostEqual(sum(snap["pc"]["cpu"].values()), win["cpu"], places=6)
         self.assertEqual(next(g for g in snap["groups"] if g["id"] == "other")["status"], "warning")
         self.assertTrue(next(g for g in snap["groups"] if g["id"] == "sensor")["nic"])
+
+
+class HomeLink(unittest.TestCase):
+    def test_present_when_set_and_escaped(self):
+        html = home_link({"DASH_HOME_URL": "https://hub.example/?a=1&b=2", "DASH_HOME_LABEL": "Hub <1>"})
+        self.assertEqual(html, '<a class="home" href="https://hub.example/?a=1&amp;b=2">&#8962; Hub &lt;1&gt;</a>')
+        self.assertIn("&#8962; Home<", home_link({"DASH_HOME_URL": "HTTP://hub.example"}))
+
+    def test_absent_when_unset_or_not_http(self):
+        self.assertEqual(home_link({}), "")
+        self.assertEqual(home_link({"DASH_HOME_URL": "  "}), "")
+        self.assertEqual(home_link({"DASH_HOME_URL": "javascript:alert(1)"}), "")
+        self.assertEqual(home_link({"DASH_HOME_URL": "//hub.example"}), "")
+
+    def test_page_has_the_placeholder_in_the_header(self):
+        page = (ROOT / "rigwatch" / "static" / "index.html").read_text()
+        self.assertLess(page.index('<div class="top-right">'), page.index("<!--home-->"))
 
 
 class HistoryTest(unittest.TestCase):

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import fnmatch
+import html
 import json
 import os
 import sqlite3
@@ -374,6 +375,18 @@ CONTENT_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; c
                  ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml"}
 
 
+def home_link(env=os.environ) -> str:
+    """The "back to the hub" pill from DASH_HOME_URL / DASH_HOME_LABEL; empty when unset or not http(s)."""
+    url = (env.get("DASH_HOME_URL") or "").strip()
+    if not url:
+        return ""
+    if not url.lower().startswith(("http://", "https://")):
+        print("rigwatch: ignoring DASH_HOME_URL, it must start with http:// or https://", flush=True)
+        return ""
+    label = (env.get("DASH_HOME_LABEL") or "").strip() or "Home"
+    return f'<a class="home" href="{html.escape(url)}">&#8962; {html.escape(label)}</a>'
+
+
 def make_handler(mon: Monitor):
     class Handler(BaseHTTPRequestHandler):
         server_version = "rigwatch"
@@ -408,7 +421,10 @@ def make_handler(mon: Monitor):
             name = "index.html" if url.path in ("/", "") else url.path.lstrip("/")
             f = (STATIC / name).resolve()
             if STATIC in f.parents and f.is_file():
-                return self._send(200, f.read_bytes(), CONTENT_TYPES.get(f.suffix, "application/octet-stream"))
+                body = f.read_bytes()
+                if f.suffix == ".html":
+                    body = body.replace(b"<!--home-->", home_link().encode())
+                return self._send(200, body, CONTENT_TYPES.get(f.suffix, "application/octet-stream"))
             self._send(404, b"not found", "text/plain")
 
         def _stream(self):
