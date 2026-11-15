@@ -210,6 +210,7 @@ def build_snapshot(cfg: Config, wsl: dict, win: dict | None, sampler: WslSampler
             "cpu": win["cpu"], "mem_used": win["mem_used"], "mem_total": win["mem_total"],
             "vmmem_ws": vm["ws"], "vmmem_cpu": vm["cpu"], "nproc": win["nproc"],
             "procs": top[:24], "gpu": win.get("gpu"), "vram_total": win.get("vram_total", 0),
+            "temps": win.get("temps") or None,
             "net": [dict(n, app=next((g.name for g in cfg.groups if n["name"] in g.nics), "")) for n in win["net"]],
         }
         total_cpu, total_mem = win["cpu"], win["mem_total"]
@@ -233,6 +234,9 @@ def build_snapshot(cfg: Config, wsl: dict, win: dict | None, sampler: WslSampler
 
 # ---------------------------------------------------------------- history
 
+TEMP_KEYS = ("gpu", "cpu")      # temperatures that get a history series; the rest are shown live only
+
+
 class History:
     """2 s samples in memory for the last 30 min; one row per series per minute in SQLite."""
 
@@ -254,6 +258,9 @@ class History:
         point = {"t": snap["t"], "c": snap["pc"]["cpu"], "m": snap["pc"]["mem"]}
         gpu = (snap.get("win") or {}).get("gpu") or {}
         point["c"] = dict(point["c"], gpu=gpu.get("util", 0.0), total=snap["pc"]["cpu_total"])
+        for k, v in ((snap.get("win") or {}).get("temps") or {}).items():
+            if k in TEMP_KEYS and v:                    # degrees C ride along in the cpu columns: avg + peak
+                point["c"]["temp_" + k] = float(v)
         with self.lock:
             self.ring.append(point)
             minute = t // 60 * 60

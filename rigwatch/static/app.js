@@ -68,6 +68,7 @@ function seriesDefs(metric) {
 function pushLive(snap) {
   const L = state.live;
   const cpu = { ...snap.pc.cpu, total: snap.pc.cpu_total, gpu: snap.win?.gpu?.util ?? 0 };
+  for (const [k, v] of Object.entries(snap.win?.temps || {})) if (TEMP[k]) cpu['temp_' + k] = v;
   const mem = snap.pc.mem;
   for (const [obj, buf] of [[cpu, L.cpu], [mem, L.mem]]) {
     for (const k of Object.keys(obj)) if (!buf[k]) buf[k] = new Array(L.t.length).fill(0);
@@ -110,6 +111,12 @@ function spark(values, color, h = 44, max) {
     <path d="${line}L100 ${h}L0 ${h}Z" style="fill:${color};opacity:.14"/>
     <path d="${line}" fill="none" style="stroke:${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
+
+// temperatures: which readings get a headline, and where each one starts to matter (degrees C)
+const TEMP = { cpu: { label: 'CPU', warm: 80, hot: 90 }, gpu: { label: 'GPU', warm: 80, hot: 90 } };
+const fmtTemp = v => v == null || isNaN(v) ? '–' : Math.round(v) + '°C';
+const tempLevel = (k, v) => v >= TEMP[k].hot ? 'critical' : v >= TEMP[k].warm ? 'warning' : '';
+const tempWord = (k, v) => ({ critical: 'hot', warning: 'warm' }[tempLevel(k, v)] || 'normal');
 
 const ICON = {
   good: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.3 5.2-3.9 4.4a.8.8 0 0 1-1.2 0L4.7 9a.8.8 0 1 1 1.2-1.1l.9 1 3.3-3.8a.8.8 0 1 1 1.2 1.1z"/></svg>',
@@ -345,6 +352,19 @@ function renderTiles() {
   } else {
     tiles.push(`<article class="card tile"><div class="label">GPU</div><div class="value">–</div><div class="foot">${w ? 'reading counters…' : 'needs the Windows sampler'}</div></article>`);
   }
+  const temps = Object.keys(TEMP).filter(k => w?.temps?.[k]).map(k => ({ k, v: w.temps[k] }));
+  if (temps.length) {
+    const top = temps.reduce((a, b) => (b.v > a.v ? b : a));            // headline the hottest part
+    const lvl = tempLevel(top.k, top.v);
+    const buf = (state.live.cpu['temp_' + top.k] || []).filter(v => v > 0);
+    const others = temps.filter(x => x !== top).map(x => `${TEMP[x.k].label} ${fmtTemp(x.v)}`);
+    const foot = [lvl ? tempWord(top.k, top.v) : '', ...others, buf.length > 1 ? `peak ${Math.round(Math.max(...buf))}°` : '',
+      top.k === 'gpu' && w.temps.gpu_fan ? `${Math.round(w.temps.gpu_fan).toLocaleString()} rpm` : ''].filter(Boolean);
+    tiles.push(`<article class="card tile"><div class="label">${TEMP[top.k].label} temperature</div>
+      <div class="value"${lvl ? ` style="color:var(--${lvl})"` : ''}>${fmtTemp(top.v)}</div>
+      <div class="foot">${esc(foot.join(' · '))}</div>
+      ${spark(buf.map(v => Math.max(0, v - 30)), lvl ? `var(--${lvl})` : 'var(--s2)', 28, 60)}</article>`);     // 30 to 90 degrees
+  }
   const up = (w?.net || []).filter(n => !n.app);
   const rx = up.reduce((a, n) => a + n.rx, 0), tx = up.reduce((a, n) => a + n.tx, 0);
   tiles.push(`<article class="card tile"><div class="label">Internet (uplink)</div>
@@ -360,6 +380,7 @@ function renderTiles() {
   tiles.push(`<article class="card tile"><div class="label">Health</div>
     <div class="value">${issues.length ? issues.length + `<small>${issues.length === 1 ? 'issue' : 'issues'}</small>` : 'All good'}</div>
     <div class="foot">${issues.length ? pill(worst) + ' ' + esc(issues[0].app) : `${s.groups.length} apps checked`}</div></article>`);
+  $('#tiles').style.setProperty('--n', tiles.length);
   $('#tiles').innerHTML = tiles.join('');
 }
 
@@ -446,6 +467,8 @@ function renderWindows() {
           <div class="meter"><i style="width:${(g.vram_used / (w.vram_total || 1)) * 100}%;background:var(--s7)"></i></div>
         </div>
       </div>
+      ${w.temps?.gpu ? `<ul class="mini"><li><span>Temperature<span class="tag">${tempWord('gpu', w.temps.gpu)}</span></span><b${tempLevel('gpu', w.temps.gpu) ? ` style="color:var(--${tempLevel('gpu', w.temps.gpu)})"` : ''}>${fmtTemp(w.temps.gpu)}</b></li>
+        ${w.temps.gpu_fan ? `<li><span>Fan</span><b>${Math.round(w.temps.gpu_fan).toLocaleString()} rpm</b></li>` : ''}</ul>` : ''}
       <ul class="mini">${(g.procs || []).slice(0, 5).map(p => `<li><span>${esc(p.name)}<span class="tag">${esc(p.type)}</span></span><b>${fmtPct(p.util)}</b></li>`).join('') || '<li><span>No program is using the GPU</span></li>'}</ul>`;
   }
 

@@ -18,6 +18,39 @@ public static class RW {
     public ulong pf; public ulong pfa; public ulong v; public ulong va; public ulong vx; }
   [DllImport("kernel32.dll")] public static extern bool GlobalMemoryStatusEx([In, Out] MEM m);
 }
+// GPU temperature and fan speed from the graphics kernel, the call Task Manager uses.
+// Needs no admin rights and no vendor tool; works for any WDDM 2.4+ driver that reports it.
+public static class RWT {
+  [StructLayout(LayoutKind.Sequential)] struct ENUM2 { public uint n; public IntPtr p; }
+  [StructLayout(LayoutKind.Sequential)] struct QAI { public uint h; public uint type; public IntPtr data; public uint size; }
+  [DllImport("gdi32.dll")] static extern int D3DKMTEnumAdapters2(ref ENUM2 e);
+  [DllImport("gdi32.dll")] static extern int D3DKMTQueryAdapterInfo(ref QAI q);
+  static uint[] handles;          // opened once, kept for the life of the sampler
+  static void Open() {
+    var e = new ENUM2(); e.n = 16; e.p = Marshal.AllocHGlobal(16 * 20);       // D3DKMT_ADAPTERINFO is 20 bytes
+    handles = new uint[0];
+    if (D3DKMTEnumAdapters2(ref e) == 0) {
+      handles = new uint[e.n];
+      for (int i = 0; i < e.n; i++) handles[i] = (uint)Marshal.ReadInt32(e.p, i * 20);
+    }
+    Marshal.FreeHGlobal(e.p);
+  }
+  // {degrees C, fan rpm} of the hottest adapter that reports a temperature, or null
+  public static double[] Read() {
+    if (handles == null) Open();
+    double[] best = null;
+    IntPtr buf = Marshal.AllocHGlobal(64);                                    // D3DKMT_ADAPTER_PERFDATA
+    foreach (uint h in handles) {
+      for (int i = 0; i < 64; i += 4) Marshal.WriteInt32(buf, i, 0);
+      var q = new QAI(); q.h = h; q.type = 62; q.data = buf; q.size = 64;     // KMTQAITYPE_ADAPTERPERFDATA
+      if (D3DKMTQueryAdapterInfo(ref q) != 0) continue;
+      double t = (uint)Marshal.ReadInt32(buf, 56) / 10.0;                     // tenths of a degree
+      if (t > 0 && t < 150 && (best == null || t > best[0])) best = new double[] { t, (uint)Marshal.ReadInt32(buf, 48) };
+    }
+    Marshal.FreeHGlobal(buf);
+    return best;
+  }
+}
 "@
 
 $ncpu = [Environment]::ProcessorCount
@@ -129,6 +162,10 @@ while ($true) {
     $gpuOut = @{ util = [math]::Min(100, $util); vram_used = $vused; procs = @($gp.Values | Sort-Object { $_.util } -Descending | Select-Object -First 8) }
   }
 
+  $temps = $null
+  $gt = [RWT]::Read()
+  if ($gt) { $temps = @{ gpu = $gt[0]; gpu_fan = $gt[1] } }
+
   $netNow = NetCounters
   $nets = @()
   foreach ($kv in $netNow.GetEnumerator()) {
@@ -148,6 +185,7 @@ while ($true) {
     procs = @($keep.Values | ForEach-Object { @{ name = $_.name; cpu = $_.cpu; ws = $_.ws; n = $_.n } })
     self = $self
     gpu_name = $gpu.Name; vram_total = [double]$vram; gpu = $gpuOut
+    temps = $temps
     net = $nets
   }
   [Console]::Out.WriteLine(($out | ConvertTo-Json -Compress -Depth 5))

@@ -141,7 +141,7 @@ main { max-width: 1440px; margin: 0 auto; padding: 8px 24px 40px; display: grid;
 .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 
 /* ---------- tiles */
-.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.tiles { display: grid; grid-template-columns: repeat(var(--n, 6), 1fr); gap: 14px; }
 .tile { padding: 14px 16px; }
 .tile .label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
 .tile .value { font-size: 24px; font-weight: 680; letter-spacing: -0.02em; margin-top: 4px; white-space: nowrap; }
@@ -255,7 +255,7 @@ footer { color: var(--muted); font-size: 12px; text-align: center; padding-top: 
 footer b { color: var(--ink-2); font-weight: 600; }
 
 @media (max-width: 1200px) {
-  .tiles { grid-template-columns: repeat(3, 1fr); }
+  .tiles { grid-template-columns: repeat(4, 1fr); }
   .apps { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {

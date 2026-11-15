@@ -108,6 +108,7 @@ def demo_inputs(cfg: Config, t: float, rng: random.Random) -> tuple[dict, dict]:
            "cpu_name": "16-thread desktop CPU", "gpu_name": "Desktop GPU", "vram_total": 16 * GB,
            "procs": procs, "nproc": 140, "self": {"cpu": 0.08, "ws": 160 * MB},
            "gpu": {"util": min(100.0, gpu), "vram_used": 2.8 * GB + 7 * GB * game, "procs": gprocs},
+           "temps": {"gpu": 39 + 33 * game + 1.5 * rng.random(), "gpu_fan": round(620 + 1100 * game)},
            "net": [{"name": "Ethernet", "desc": "2.5GbE adapter", "rx": 300_000 + 900_000 * rng.random(),
                     "tx": 60_000 + 80_000 * rng.random()},
                    {"name": "Mirror", "desc": "USB gigabit adapter", "rx": 1_500_000 + 2_000_000 * day * rng.random(),
@@ -136,7 +137,8 @@ class DemoMonitor(Monitor):
         for m in range(7 * 24 * 60, 30, -1):
             t = (now // 60 - m) * 60
             s = self._snap(t)
-            c = dict(s["pc"]["cpu"], gpu=s["win"]["gpu"]["util"], total=s["pc"]["cpu_total"])
+            c = dict(s["pc"]["cpu"], gpu=s["win"]["gpu"]["util"], total=s["pc"]["cpu_total"],
+                     temp_gpu=s["win"]["temps"]["gpu"])
             for k in set(c) | set(s["pc"]["mem"]):
                 v = c.get(k, 0.0)
                 rows.append((int(t), k, v, v * (1.2 + self.rng.random()), s["pc"]["mem"].get(k, 0.0)))

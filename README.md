@@ -24,7 +24,8 @@ Windows*, and *idle*, so the answer to "is my stuff the problem?" is one glance.
   the processes are gone), and a watched Windows program that stopped. Cards also show
   when timers next run, disk throughput, and capture-port traffic.
 - **The rest of your PC.** Top Windows programs, GPU (Task Manager's busiest-engine
-  figure, VRAM, which program is using it), and every network adapter.
+  figure, VRAM, temperature and fan speed, which program is using it), and every
+  network adapter.
 - **Light and dark**, phone-friendly, and no external scripts or fonts. The categorical
   palette is validated for colour-vision deficiency in both themes.
 
@@ -43,7 +44,7 @@ Attribution is exact wherever the kernel already keeps the books.
 | systemd units and Docker containers | their cgroup v2: `cpu.stat`, `memory.current` minus page cache, `io.stat`, `pids.current` |
 | Processes inside a shared cgroup (e.g. agent sessions in a terminal multiplexer) | `/proc/<pid>` CPU ticks and `RssAnon`, matched by command line and claimed with their whole process tree |
 | WSL totals | `/proc/stat`, `/proc/meminfo`, `/proc/net/dev` |
-| Windows | one long-lived PowerShell started over WSL interop ([`winsampler.ps1`](rigwatch/winsampler.ps1)): `GetSystemTimes`, `GlobalMemoryStatusEx`, per-process CPU deltas, GPU Engine counters, adapter statistics |
+| Windows | one long-lived PowerShell started over WSL interop ([`winsampler.ps1`](rigwatch/winsampler.ps1)): `GetSystemTimes`, `GlobalMemoryStatusEx`, per-process CPU deltas, GPU Engine counters, GPU temperature and fan from `D3DKMTQueryAdapterInfo` (what Task Manager reads, no admin rights), adapter statistics |
 
 CPU is always a percent of the whole machine, on both sides, so the parts add up:
 

@@ -141,6 +141,14 @@ class Accounting(unittest.TestCase):
         tw = next(g for g in snap["groups"] if g["id"] == "tw")
         self.assertEqual(tw["nic"]["rx"], 1e6)
         self.assertNotIn("dumpcap", [p["name"] for p in snap["win"]["procs"]])
+        self.assertIsNone(snap["win"]["temps"])           # this sampler reported none
+
+    def test_temperatures_pass_through(self):
+        c = cfg()
+        win = {"ncpu": 16, "cpu": 30.0, "mem_total": 64000, "mem_used": 20000, "cpu_name": "x", "procs": [],
+               "net": [], "nproc": 0, "self": None, "temps": {"gpu": 61.5, "gpu_fan": 1100.0}}
+        snap = build_snapshot(c, wsl_sample(c), win, FakeSampler())
+        self.assertEqual(snap["win"]["temps"], {"gpu": 61.5, "gpu_fan": 1100.0})
 
     def test_without_windows(self):
         c = cfg()
@@ -208,6 +216,18 @@ class HistoryTest(unittest.TestCase):
             self.assertEqual(len(hour["t"]), 2)           # two finished minutes flushed, the current one pending
             self.assertEqual(hour["cpu"]["a"], [0.5, 2.0])
             self.assertEqual(hour["peak"]["a"], 2.0)
+
+    def test_temperature_series(self):
+        with tempfile.TemporaryDirectory() as d:
+            h = History(Path(d) / "h.db")
+            now = int(time.time())
+            for i, temps in enumerate([{"gpu": 60.0, "gpu_fan": 900.0}, {"gpu": 72.0, "gpu_fan": 1500.0}, None]):
+                h.add({"t": (now - 10 + i) * 1000, "pc": {"cpu": {"a": 1.0}, "mem": {"a": 1.0}, "cpu_total": 1.0},
+                       "win": {"gpu": None, "temps": temps}})
+            live = h.query("15m")
+            self.assertEqual(live["cpu"]["temp_gpu"], [60.0, 72.0, 0.0])      # a missing reading charts as a gap
+            self.assertEqual(live["peak"]["temp_gpu"], 72.0)
+            self.assertNotIn("temp_gpu_fan", live["cpu"])                     # the fan is live only
 
 
 if __name__ == "__main__":
